@@ -37,6 +37,8 @@ namespace Client
 
     public enum RequestType
     {
+        Uncorrect,
+        Menu,
         Delete,
         GetAll,
         GetOne,

@@ -25,7 +25,12 @@ namespace Server
 
             try
             {
-                using (StreamReader reader = new StreamReader(filePath, true))
+                if (!File.Exists(filePath))
+                {
+                    WriteRecords();
+                    Console.WriteLine("No");
+                }
+                using (StreamReader reader = new StreamReader(filePath))
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)

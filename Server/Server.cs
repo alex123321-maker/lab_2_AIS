@@ -16,11 +16,13 @@ namespace Server
             Server server = new Server(8001);
             Console.WriteLine("Сервер запущен. Для выхода нажмите Enter.");
             Console.ReadLine(); // Ждем, пока пользователь нажмет Enter, прежде чем завершить программу
-        }
+
     }
+}
 
     class Server
     {
+        private YachtClubController yachtClubController;
         private int port;
         private UdpClient listener;
 
@@ -28,6 +30,8 @@ namespace Server
         {
             port = _port;
             listener = new UdpClient(_port);
+            yachtClubController = new YachtClubController();
+            yachtClubController.ReadAllRecords();
             Task.Run(() => StartListenAsync());
         }
 
@@ -54,16 +58,62 @@ namespace Server
 
         private void ProcessRequest(byte[] requestData, IPEndPoint clientEndPoint)
         {
+            StringBuilder message = new StringBuilder(" \"запрос получен\""); ;
+            ResponseType responseType = ResponseType.Success;
             // Десериализация запроса
             string jsonRequest = Encoding.UTF8.GetString(requestData);
             Request request = Request.Deserialize(jsonRequest);
 
             // Обработка запроса (ваша логика здесь)
             // ...
-            Console.Out.WriteLineAsync(request.Message);
+            Console.Out.WriteLineAsync($"{request.MessageType}:{request.Message}");
+            switch (request.MessageType)
+            {
+                case RequestType.Delete:
+                    // Логика обработки запроса типа Delete
+                    // ...
+                    break;
+                case RequestType.GetAll:
+                    message = new StringBuilder();
+                    var list = yachtClubController.GetYachtClubs();
+                    Console.WriteLine(list.Count);
+                    for (int index = 0; index < list.Count; index++)
+                    {
+                        message.Append($"Индекс : {index}" +
+                            $"\nНазвание : {list[index].Name}" +
+                            $"\nАдрес : {list[index].Address}" +
+                            $"\nКоличество яхт : {list[index].NumberOfYachts}" +
+                            $"\nКоличество мест : {list[index].NumberOfPlaces}" +
+                            $"\nНаличие бассейна : {list[index].HasPool}\n");
+                    }
 
+                    break;
+                case RequestType.GetOne:
+
+                    
+                    break;
+                case RequestType.Post:
+                    // Логика обработки запроса типа Post
+                    // ...
+                    break;
+                case RequestType.Menu:
+                    message = new StringBuilder(" cписок команд:\n- delete\n- getAll\n- getOne\n- post\n- exit");
+                    break;
+                case RequestType.Uncorrect:
+                    responseType = ResponseType.Error;
+                    message = new StringBuilder(" \"неверная команда\"");
+                    break;
+
+
+            }
+
+            ServerResponse(message,responseType,clientEndPoint);
+        }
+
+        private void ServerResponse(StringBuilder message,ResponseType respType,IPEndPoint clientEndPoint)
+        {
             // Подготовка ответа
-            Response response = new Response("Сервер получил ваш запрос и выполнил необходимые действия.", ResponseType.Success);
+            Response response = new Response(message.ToString(), respType);
             string jsonResponse = response.Serialize();
             byte[] responseData = Encoding.UTF8.GetBytes(jsonResponse);
 

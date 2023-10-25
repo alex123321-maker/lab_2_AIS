@@ -32,26 +32,46 @@ namespace Client
 
             while (true)
             {
+                await SendRequestAsync("menu");
                 string message = await Console.In.ReadLineAsync();
+
+                Console.Clear();
 
                 if (message.ToLower() == "exit")
                 {
                     break;
                 }
-
+                
                 await SendRequestAsync(message);
             }
 
             client.Close();
         }
-
+        private RequestType GetRequestType(string message)
+        {
+            switch (message.Trim().ToLower())
+            {
+                case "delete":
+                    return RequestType.Delete;
+                case "getall":
+                    return RequestType.GetAll;
+                case "getone":
+                    return RequestType.GetOne;
+                case "menu":
+                    return RequestType.Menu;
+                case "post":
+                    return RequestType.Post;
+                default:
+                    return RequestType.Uncorrect;
+            }
+        }
         private async Task SendRequestAsync(string message)
         {
-            Request request = new Request(message, RequestType.Post);
+            RequestType requestType = GetRequestType(message);
+            Request request = new Request(message, requestType);
             string jsonRequest = request.Serialize();
             byte[] requestData = Encoding.UTF8.GetBytes(jsonRequest);
             await client.SendAsync(requestData, requestData.Length);
-            Console.WriteLine("Сообщение отправлено на сервер.");
             await ReceiveResponseAsync();
         }
 
@@ -60,7 +80,7 @@ namespace Client
             UdpReceiveResult result = await client.ReceiveAsync();
             string jsonResponse = Encoding.UTF8.GetString(result.Buffer);
             Response response = Response.Deserialize(jsonResponse);
-            Console.WriteLine($"Сервер прислал: {response.Message}");
+            Console.WriteLine($"Сервер прислал{response.Message}");
         }
     }
 

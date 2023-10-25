@@ -13,5 +13,6 @@ namespace Server
         public int NumberOfYachts { get; set; }
         public int NumberOfPlaces { get; set; }
         public bool HasPool { get; set; }
+        
     }
 }
