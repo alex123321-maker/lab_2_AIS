@@ -58,7 +58,7 @@ namespace Server
 
         private void ProcessRequest(byte[] requestData, IPEndPoint clientEndPoint)
         {
-            StringBuilder message = new StringBuilder(" \"запрос получен\""); ;
+            StringBuilder message = new StringBuilder(" Запрос получен"); ;
             ResponseType responseType = ResponseType.Success;
             // Десериализация запроса
             string jsonRequest = Encoding.UTF8.GetString(requestData);
@@ -70,13 +70,30 @@ namespace Server
             switch (request.MessageType)
             {
                 case RequestType.Delete:
-                    // Логика обработки запроса типа Delete
-                    // ...
+                    try
+                    {
+                        if (request.Parametrs.TryGetValue("Index", out string indexString) && int.TryParse(indexString, out int index))
+                        {
+                            yachtClubController.RemoveRecord(index);
+                            message = new StringBuilder("Запись успешно удалена.");
+                            responseType = ResponseType.Success;
+                            yachtClubController.WriteRecords();
+                        }
+                        else
+                        {
+                            message = new StringBuilder("Ошибка: Некорректный формат индекса.");
+                            responseType = ResponseType.Error;
+                        }
+                    }
+                    catch (IndexOutOfRangeException ex)
+                    {
+                        message = new StringBuilder($"Ошибка: Некорректный индекс");
+                        responseType = ResponseType.Error;
+                    }
                     break;
                 case RequestType.GetAll:
                     message = new StringBuilder();
                     var list = yachtClubController.GetYachtClubs();
-                    Console.WriteLine(list.Count);
                     for (int index = 0; index < list.Count; index++)
                     {
                         message.Append($"Индекс : {index}" +
@@ -84,24 +101,87 @@ namespace Server
                             $"\nАдрес : {list[index].Address}" +
                             $"\nКоличество яхт : {list[index].NumberOfYachts}" +
                             $"\nКоличество мест : {list[index].NumberOfPlaces}" +
-                            $"\nНаличие бассейна : {list[index].HasPool}\n");
+                            $"\nНаличие бассейна : {list[index].HasPool}" +
+                            $"\n----------------------------------\n");
                     }
 
                     break;
                 case RequestType.GetOne:
-
-                    
+                    try
+                    {
+                        if (request.Parametrs.TryGetValue("Index", out string indexString) && int.TryParse(indexString, out int index))
+                        {
+                            var el = yachtClubController.GetYachtClub(index);
+                            message = new StringBuilder($"Индекс : {index}" +
+                            $"\nНазвание : {el.Name}" +
+                            $"\nАдрес : {el.Address}" +
+                            $"\nКоличество яхт : {el.NumberOfYachts}" +
+                            $"\nКоличество мест : {el.NumberOfPlaces}" +
+                            $"\nНаличие бассейна : {el.HasPool}" +
+                            $"\n----------------------------------");
+                            responseType = ResponseType.Success;
+                            yachtClubController.WriteRecords();
+                        }
+                        else
+                        {
+                            message = new StringBuilder("Ошибка: Некорректный формат индекса.");
+                            responseType = ResponseType.Error;
+                        }
+                    }
+                    catch (ArgumentOutOfRangeException ex)
+                    {
+                        message = new StringBuilder($"Ошибка: Некорректный индекс");
+                        responseType = ResponseType.Error;
+                    }
                     break;
                 case RequestType.Post:
-                    // Логика обработки запроса типа Post
-                    // ...
+                    try
+                    {
+                        string name, address;
+                        int numberOfYachts, numberOfPlaces;
+                        bool hasPool;
+
+                        if (request.Parametrs.TryGetValue("Name", out name) &&
+                            request.Parametrs.TryGetValue("Address", out address) &&
+                            request.Parametrs.TryGetValue("NumberOfYachts", out string numberOfYachtsStr) &&
+                            int.TryParse(numberOfYachtsStr, out numberOfYachts) &&
+                            request.Parametrs.TryGetValue("NumberOfPlaces", out string numberOfPlacesStr) &&
+                            int.TryParse(numberOfPlacesStr, out numberOfPlaces) &&
+                            request.Parametrs.TryGetValue("HasPool", out string hasPoolStr) &&
+                            bool.TryParse(hasPoolStr, out hasPool))
+                        {
+                            YachtClub newYachtClub = new YachtClub
+                            {
+                                Name = name,
+                                Address = address,
+                                NumberOfYachts = numberOfYachts,
+                                NumberOfPlaces = numberOfPlaces,
+                                HasPool = hasPool
+                            };
+                            yachtClubController.AddRecord(newYachtClub);
+                            message = new StringBuilder("Запись успешно добавлена.");
+                            responseType = ResponseType.Success;
+                            yachtClubController.WriteRecords();
+                        }
+                        else
+                        {
+                            message = new StringBuilder("Ошибка: Некорректные параметры запроса.");
+                            responseType = ResponseType.Error;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        message = new StringBuilder($"Ошибка: {ex.Message}");
+                        responseType = ResponseType.Error;
+                    }
                     break;
+
                 case RequestType.Menu:
-                    message = new StringBuilder(" cписок команд:\n- delete\n- getAll\n- getOne\n- post\n- exit");
+                    message = new StringBuilder("Список команд:\n- delete\n- getAll\n- getOne\n- post\n- exit");
                     break;
                 case RequestType.Uncorrect:
                     responseType = ResponseType.Error;
-                    message = new StringBuilder(" \"неверная команда\"");
+                    message = new StringBuilder("неверная команда");
                     break;
 
 
@@ -121,247 +201,4 @@ namespace Server
             listener.SendAsync(responseData, responseData.Length, clientEndPoint);
         }
     }
-
-
-    //public void SendMenu(IPEndPoint endPoint)
-    //{
-    //    byte[] data = ToByte("\x1b[3J\nМеню:\n1. Вывести все яхт-клубы\n2. Добавить новый яхт-клуб\n3. Удалить яхт-клуб по индексу\n4. Изменить яхт-клуб по индексу\n5. Загрузить яхт-клубы из файла\n6. Сохранить яхт-клубы в файл\n7. Выйти");
-    //    listener.SendAsync(data,data.Length, endPoint);
-
-
-    //}
-    //    private async Task MenuChoose(string result, IPEndPoint endPoint)
-    //    {
-    //        await Console.Out.WriteLineAsync(result);
-    //        switch (result)
-    //        {
-    //            case "1":
-    //                {
-    //                    await SendMessage(Encoding.Unicode.GetBytes("Вы выбрали 'Вывести все яхт-клубы'"), endPoint);
-    //                    await DisplayYachtClubs(endPoint);
-    //                    allDone.Set();
-    //                }
-
-    //                break;
-    //            case "2":
-    //                {
-    //                    await SendMessage(Encoding.Unicode.GetBytes("Вы выбрали 'Добавить новый яхт-клуб'"), endPoint);
-    //                    await AddYachtClub(endPoint);
-    //                    allDone.Set();
-    //                }
-
-    //                break;
-    //            case "3":
-    //                //RemoveYachtClub(yachtClubController);
-    //                break;
-    //            case "4":
-    //                //ModifyYachtClub(yachtClubController);
-    //                break;
-    //            case "5":
-    //                yachtClubController.ReadAllRecords();
-    //                allDone.Set();
-    //                break;
-    //            case "6":
-    //                yachtClubController.WriteRecords();
-    //                allDone.Set();
-    //                break;
-    //            case "7":
-    //                Environment.Exit(0);
-    //                break;
-    //            default:
-    //                await SendMessage(Encoding.Unicode.GetBytes("Неверный выбор"), endPoint);
-    //                break;
-    //        }
-    //    }
-    /*
-    internal class Program
-    {
-        static void Main(string[] args)
-        {
-            NLog.LogManager.LoadConfiguration("D:/учёба 5 сем/архетектуры ИС/lab_2/NLog.config");
-            Server server = new Server(8001);
-            server.StartListenAsync();
-            server.yachtClubController.WriteRecords();
-
-        }
-
-        
-    }
-    internal class Server
-    {
-        public YachtClubController yachtClubController;
-        private static ManualResetEvent allDone = new ManualResetEvent(false);
-        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-        
-        private static UdpClient? udpServer_S;
-
-        
-        public Server(int _port)
-        {
-            Logger.Info("Сервер робит");
-            udpServer_S = new UdpClient(_port);
-           
-           
-            yachtClubController = new YachtClubController();
-           
-           
-
-
-            AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
-            {
-                Dispose();
-            };
-        }
-
-
-        public async Task StartListenAsync()
-        {
-            while (true)
-            {
-                try
-                {
-                    allDone.Reset();
-                    udpServer_S.BeginReceive(RequestCallBack, udpServer_S);
-                    allDone.WaitOne();
-                }
-                catch (Exception ex)
-                {
-                    await Console.Out.WriteLineAsync(ex.ToString());
-                }
-            }
-
-        }
-
-        public async Task SendMessage(byte[] data, IPEndPoint endPoint)
-        {
-            await udpServer_S.SendAsync(data, data.Length, endPoint);
-        }
-
-        public async Task SendMenu(IPEndPoint endPoint)
-        {
-            allDone.Reset();
-            string data = "\x1b[3J\nМеню:\n1. Вывести все яхт-клубы\n2. Добавить новый яхт-клуб\n3. Удалить яхт-клуб по индексу\n4. Изменить яхт-клуб по индексу\n5. Загрузить яхт-клубы из файла\n6. Сохранить яхт-клубы в файл\n7. Выйти";
-            await SendMessage(Encoding.Unicode.GetBytes(data), endPoint);
-
-            var result = Encoding.Unicode.GetString(udpServer_S.ReceiveAsync().Result.Buffer);
-            await MenuChoose(result, endPoint);
-            allDone.WaitOne();
-        }
-
-
-        private async void RequestCallBack(IAsyncResult ar)
-        {
-            allDone.Set();
-            var listener = (UdpClient)ar.AsyncState;
-            IPEndPoint endPoint = (IPEndPoint)udpServer_S.Client.LocalEndPoint;
-            var res = listener.EndReceive(ar, ref endPoint);
-            string result = Encoding.Unicode.GetString(res);
-            Logger.Trace($"{endPoint.Address}:{endPoint.Port}:{result}");
-            Console.WriteLine($"{endPoint.Address}:{endPoint.Port}:{result}");
-            await SendMenu(endPoint);
-
-        }
-
-        private async Task MenuChoose(string result,IPEndPoint endPoint)
-        {
-            await Console.Out.WriteLineAsync(result);
-            switch (result)
-            {
-                case "1":
-                    {
-                        await SendMessage(Encoding.Unicode.GetBytes("Вы выбрали 'Вывести все яхт-клубы'"), endPoint);
-                        await DisplayYachtClubs(endPoint);
-                        allDone.Set();
-                    }
-                    
-                    break;
-                case "2":
-                    {
-                        await SendMessage(Encoding.Unicode.GetBytes("Вы выбрали 'Добавить новый яхт-клуб'"), endPoint);
-                        await AddYachtClub(endPoint);
-                        allDone.Set();
-                    }
-                    
-                    break;
-                case "3":
-                    //RemoveYachtClub(yachtClubController);
-                    break;
-                case "4":
-                    //ModifyYachtClub(yachtClubController);
-                    break;
-                case "5":
-                    yachtClubController.ReadAllRecords();
-                    allDone.Set();
-                    break;
-                case "6":
-                    yachtClubController.WriteRecords();
-                    allDone.Set();
-                    break;
-                case "7":
-                    Environment.Exit(0);
-                    break;
-                default:
-                    await SendMessage(Encoding.Unicode.GetBytes("Неверный выбор"), endPoint);
-                    break;
-            }
-        }
-
-        private async Task AddYachtClub(IPEndPoint endPoint)
-        {
-            try
-            {
-                YachtClub obj = new YachtClub();
-
-                await SendMessage(Encoding.Unicode.GetBytes("Введите название: "), endPoint);
-                obj.Name = Encoding.Unicode.GetString(udpServer_S.ReceiveAsync().Result.Buffer);
-
-                await SendMessage(Encoding.Unicode.GetBytes("Введите адрес: "), endPoint);
-                obj.Address = Encoding.Unicode.GetString(udpServer_S.ReceiveAsync().Result.Buffer);
-
-                await SendMessage(Encoding.Unicode.GetBytes("Введите количество яхт: "), endPoint);
-                obj.NumberOfYachts = int.Parse(Encoding.Unicode.GetString(udpServer_S.ReceiveAsync().Result.Buffer));
-
-                await SendMessage(Encoding.Unicode.GetBytes("Введите количество мест: "), endPoint);
-                obj.NumberOfPlaces = int.Parse(Encoding.Unicode.GetString(udpServer_S.ReceiveAsync().Result.Buffer));
-
-                await SendMessage(Encoding.Unicode.GetBytes("Есть ли бассейн(True/False): "), endPoint);
-                obj.HasPool = bool.Parse(Encoding.Unicode.GetString(udpServer_S.ReceiveAsync().Result.Buffer));
-                yachtClubController.AddRecord(obj);
-
-            }
-            catch (Exception ex) { 
-                
-            }
-        }
-
-        private async Task DisplayYachtClubs(IPEndPoint endPoint)
-        {
-            try
-            {
-
-                var list = yachtClubController.GetYachtClubs();
-                for (int index = 0; index < list.Count; index++ )
-                {
-                    await SendMessage(Encoding.Unicode.GetBytes($"Индекс : {index}\nНазвание : {list[index].Name}\nАдрес : {list[index].Address}\nКоличество яхт : {list[index].NumberOfYachts}\nКоличество мест : {list[index].NumberOfPlaces}\nНаличие бассейна : {list[index].HasPool}"), endPoint);
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex);
-            }
-        }
-
-        ~Server()
-        {
-            Dispose();
-        }
-
-        // Метод для явного закрытия ресурсов
-        public void Dispose()
-        {
-            udpServer_S?.Close();
-        }
-    }
-    */
 }

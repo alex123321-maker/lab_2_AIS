@@ -14,9 +14,11 @@ namespace Client
     {
         public string Message { get; set; }
         public RequestType MessageType { get; set; }
+        public Dictionary<string,string> Parametrs { get; set; }
 
-        public Request(string message, RequestType type)
+        public Request(string message, RequestType type, Dictionary<string, string> parametrs)
         {
+            Parametrs = parametrs;
             Message = message;
             MessageType = type;
         }

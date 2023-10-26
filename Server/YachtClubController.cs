@@ -98,6 +98,7 @@ namespace Server
         // Метод для удаления записи по индексу
         public void RemoveRecord(int index)
         {
+            
             if (index >= 0 && index < yachtClubs.Count)
             {
                 yachtClubs.RemoveAt(index);
@@ -105,6 +106,7 @@ namespace Server
             else
             {
                 Logger.Error("Неверный индекс для удаления записи.");
+                throw new IndexOutOfRangeException();
             }
         }
         public List<YachtClub> GetYachtClubs()
@@ -113,15 +115,7 @@ namespace Server
         }
         public YachtClub GetYachtClub(int index)
         {
-            try
-            {
-                return yachtClubs.ElementAt(index);
-            } 
-            catch (Exception ex)
-            {
-                Logger.Error(ex.ToString());
-            }
-            return null;
+            return yachtClubs.ElementAt(index);
         }
         
     }

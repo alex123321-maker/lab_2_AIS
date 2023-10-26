@@ -34,7 +34,7 @@ namespace Client
             {
                 await SendRequestAsync("menu");
                 string message = await Console.In.ReadLineAsync();
-
+                
                 Console.Clear();
 
                 if (message.ToLower() == "exit")
@@ -46,6 +46,38 @@ namespace Client
             }
 
             client.Close();
+        }
+        private Dictionary<string,string> GetRequestParams(RequestType requestType)
+        {
+            Dictionary<string,string> pars = new Dictionary<string,string>();
+
+            switch (requestType)
+            {
+
+                case RequestType.Delete:
+                    Console.WriteLine("Введите индекс элемента который хотите удалить: ");
+                    pars.Add("Index", Console.ReadLine());
+                    break;
+                case RequestType.GetOne:
+                    Console.WriteLine("Введите индекс элемента который хотите получить: ");
+                    pars.Add("Index", Console.ReadLine());
+                    break;
+                case RequestType.Post:
+                    Console.WriteLine("Введите необходимые для создания элемента параметры: ");
+                    
+                    Console.WriteLine("Введите название клуба: ");
+                    pars.Add("Name", Console.ReadLine());
+                    Console.WriteLine("Введите адресс клуба: ");
+                    pars.Add("Address", Console.ReadLine());
+                    Console.WriteLine("Введите количество яхт в клубе: ");
+                    pars.Add("NumberOfYachts", Console.ReadLine());
+                    Console.WriteLine("Введите количество мест в клубе: ");
+                    pars.Add("NumberOfPlaces", Console.ReadLine());
+                    Console.WriteLine("Укажите есть ли бассейн(true/false): ");
+                    pars.Add("HasPool", Console.ReadLine());
+                    break;
+            }
+            return pars;
         }
         private RequestType GetRequestType(string message)
         {
@@ -68,7 +100,9 @@ namespace Client
         private async Task SendRequestAsync(string message)
         {
             RequestType requestType = GetRequestType(message);
-            Request request = new Request(message, requestType);
+            var parametrs = GetRequestParams(requestType);
+            Request request = new Request(message, requestType, parametrs);
+
             string jsonRequest = request.Serialize();
             byte[] requestData = Encoding.UTF8.GetBytes(jsonRequest);
             await client.SendAsync(requestData, requestData.Length);
@@ -80,7 +114,7 @@ namespace Client
             UdpReceiveResult result = await client.ReceiveAsync();
             string jsonResponse = Encoding.UTF8.GetString(result.Buffer);
             Response response = Response.Deserialize(jsonResponse);
-            Console.WriteLine($"Сервер прислал{response.Message}");
+            Console.WriteLine($"{response.Message}");
         }
     }
 
