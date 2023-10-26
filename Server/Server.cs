@@ -1,5 +1,6 @@
 ﻿using Client;
 using NLog;
+using NLog.Config;
 using System.ComponentModel.Design;
 using System.Net;
 using System.Net.Sockets;
@@ -13,6 +14,8 @@ namespace Server
     {
         static void Main(string[] args)
         {
+            LogManager.Configuration = new XmlLoggingConfiguration("NLog.config");
+
             Server server = new Server(8001);
             Console.WriteLine("Сервер запущен. Для выхода нажмите Enter.");
             Console.ReadLine(); // Ждем, пока пользователь нажмет Enter, прежде чем завершить программу
@@ -25,12 +28,17 @@ namespace Server
         private YachtClubController yachtClubController;
         private int port;
         private UdpClient listener;
+        private readonly Logger Logger;
 
         public Server(int _port)
         {
+            Logger = LogManager.GetCurrentClassLogger();
+
             port = _port;
             listener = new UdpClient(_port);
             yachtClubController = new YachtClubController();
+            Logger.Info("Сервер запущен.");
+
             yachtClubController.ReadAllRecords();
             Task.Run(() => StartListenAsync());
         }
@@ -51,7 +59,7 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.Out.WriteLineAsync(ex.ToString());
+                Logger.Error(ex);
             }
         }
 
@@ -87,6 +95,8 @@ namespace Server
                     }
                     catch (IndexOutOfRangeException ex)
                     {
+                        Logger.Error(ex);
+
                         message = new StringBuilder($"Ошибка: Некорректный индекс");
                         responseType = ResponseType.Error;
                     }
@@ -130,6 +140,8 @@ namespace Server
                     }
                     catch (ArgumentOutOfRangeException ex)
                     {
+                        Logger.Error(ex);
+
                         message = new StringBuilder($"Ошибка: Некорректный индекс");
                         responseType = ResponseType.Error;
                     }
@@ -171,6 +183,8 @@ namespace Server
                     }
                     catch (Exception ex)
                     {
+                        Logger.Error(ex);
+
                         message = new StringBuilder($"Ошибка: {ex.Message}");
                         responseType = ResponseType.Error;
                     }
